@@ -1,0 +1,46 @@
+version: '3'
+services:
+  zookeeper:
+    hostname: zookeeper
+    image: confluentinc/cp-zookeeper:6.2.0
+    environment:
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_CLIENT_PORT: 12181
+      ZOOKEEPER_DATA_DIR: /zookeeper/data
+    ports:
+      - 12181:12181
+    volumes:
+      - ./zookeeper/data:/zookeeper/data
+
+  kafka:
+    image: confluentinc/cp-kafka:6.2.0
+    hostname: kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:12181
+      KAFKA_ADVERTISED_LISTENERS: IN://kafka:9092,OUT://localhost:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: IN:PLAINTEXT,OUT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: IN
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_LOG_DIRS: /kafka
+    ports:
+      - 19092:19092
+    volumes:
+      - ./kafka:/kafka
+
+  akhq:
+    image: tchiotludo/akhq:latest
+    hostname: akhq
+    depends_on:
+      - kafka
+    environment:
+      AKHQ_CONFIGURATION: |
+        akhq:
+          connections:
+            kafka:
+              properties:
+                bootstrap.servers: kafka:9092
+    ports:
+      - 8080:8080
