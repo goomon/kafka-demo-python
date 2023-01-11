@@ -1,10 +1,9 @@
 import logging
 import json
-import os
 import sys
+from configparser import ConfigParser
 
 from confluent_kafka import Producer
-from dotenv import load_dotenv
 from flask import Flask
 import linecache
 
@@ -12,15 +11,20 @@ from callback.producer_callback import delivery_callback
 
 app = Flask(__name__)
 
-load_dotenv(verbose=True)
-BOOTSTRAP_SERVER = os.getenv("BOOTSTRAP_SERVER")
-RAW_SENSOR_DATA = os.getenv("RAW_SENSOR_DATA")
-conf_producer = {"bootstrap.servers": BOOTSTRAP_SERVER}
-producer = Producer(conf_producer)
+# Constants
+RAW_SENSOR_DATA = "raw_sensor_data"
 
+# Logging options
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.StreamHandler(sys.stdout))
+
+# Producer settings
+config_parser = ConfigParser()
+config_parser.read("config/v1.ini")
+config = dict(config_parser["default"])
+config.update(config_parser["producer"])
+producer = Producer(config)
 
 @app.route("/sensordata/<int:line_num>")
 def generate_data(line_num):

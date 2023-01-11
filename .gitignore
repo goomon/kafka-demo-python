@@ -3,4 +3,3 @@ venv/
 docker/
 !docker/**/kafka-cluster.yml
 !docker/**/kafka-single.yml
-./.env

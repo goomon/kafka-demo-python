@@ -1,12 +1,13 @@
 import logging
 import json
-import os
 import sys
 import time
+from argparse import ArgumentParser, FileType
+from configparser import ConfigParser
+from copy import deepcopy
 
 from confluent_kafka import Consumer, Producer
 from datetime import datetime, timedelta
-from dotenv import load_dotenv
 
 from callback.producer_callback import delivery_callback
 
@@ -14,11 +15,9 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.StreamHandler(sys.stdout))
 
-load_dotenv(verbose=True)
-BOOTSTRAP_SERVER = os.getenv("BOOTSTRAP_SERVER")
-RAW_SENSOR_DATA = os.getenv("RAW_SENSOR_DATA")
-PREPROCESSED_DATA = os.getenv("PREPROCESSED_DATA")
-FEATURE_DATA = os.getenv("FEATURE_DATA")
+RAW_SENSOR_DATA = "raw_sensor_data"
+PREPROCESSED_DATA = "preprocessed_data"
+FEATURE_DATA = "feature_data"
 
 def preprocess_data(msg):
     json_loads = json.loads(msg)
@@ -30,7 +29,6 @@ def preprocess_data(msg):
     mock_data["y"] = float(json_loads["y"]) if json_loads.get("y") else None
     mock_data["z"] = float(json_loads["z"]) if json_loads.get("z") else None
     return mock_data
-
 
 def feature_extraction(msg_buf, mode, start_time):
     # 어디까지 데이터 읽을 것인지 마지막 시점 설정해야 함 (lastTime가지고 설정)
@@ -71,11 +69,25 @@ def feature_extraction(msg_buf, mode, start_time):
         return True
 
 if __name__ == "__main__":
-    conf_producer = {"bootstrap.servers": BOOTSTRAP_SERVER}
-    conf_consumer = {"bootstrap.servers": BOOTSTRAP_SERVER, "group.id": "test", "auto.offset.reset": "latest"}
-    producer1 = Producer(conf_producer)
-    producer2 = Producer(conf_producer)
-    consumer = Consumer(conf_consumer)
+    parser = ArgumentParser(prog="consume_data")
+    parser.add_argument("--config", type=FileType("r"), default="config/v1.ini", help="config file path")
+    args = parser.parse_args()
+
+    # Configuration loading
+    config_parser = ConfigParser()
+    config_parser.read_file(args.config)
+    default_config = dict(config_parser["default"])
+
+    # Consumer settings
+    consumer_config = deepcopy(default_config)
+    consumer_config.update(config_parser["consumer"])
+    consumer = Consumer(consumer_config)
+
+    # Producer settings
+    producer_config = deepcopy(default_config)
+    producer_config.update(config_parser["producer"])
+    producer1 = Producer(producer_config)
+    producer2 = Producer(producer_config)
 
     # seconds
     window_size = 0.1

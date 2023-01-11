@@ -1,18 +1,17 @@
-import argparse
 import logging
 import requests
 import sys
 import time
+from argparse import ArgumentParser
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.StreamHandler(sys.stdout))
 
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog="publish_data")
-    parser.add_argument("-c", "--count", type=int, default=10)
-    parser.add_argument("-d", "--delay", type=float, default=0.5)
+    parser = ArgumentParser(prog="publish_data")
+    parser.add_argument("--count", type=int, default=10)
+    parser.add_argument("--delay", type=float, default=0.5)
     args = parser.parse_args()
 
     url_factory = lambda n: f"http://localhost:3030/sensordata/{n}"

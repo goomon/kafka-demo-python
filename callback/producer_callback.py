@@ -4,6 +4,7 @@ import sys
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.StreamHandler(sys.stdout))
+
 def delivery_callback(err, msg):
     if err:
         logger.debug(f"ERROR: Message failed delivery: {err}")
