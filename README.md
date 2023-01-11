@@ -6,7 +6,7 @@ docker-compose -f <target-file> up [-d]
 ```
 * Target file
 
-    You should write the commands below in `docker/` directory. Otherwise volume files are created in project root directory.
+    You should write the commands below in `docker/` directory. Otherwise, volume files are created in project root directory.
     * `docker/kafka-single.yml`
   
         This is for single kafka broker and single zookeeper environment.
@@ -16,11 +16,11 @@ docker-compose -f <target-file> up [-d]
 
     * `docker/kafka-cluster.yml`
     
-        This is for kafka basic cluster environment with 3 broker ans 3 zookeepers.
+        This is for kafka basic cluster environment with 3 broker and 3 zookeepers.
       ```shell
       docker-compose -f kafka-cluster.yml up
         ```
-* Bais commands
+* Basic commands
     
     This section is for basic commands to control docker based environment. You can also use them in GUI environment with [Docker Desktop](https://www.docker.com/products/docker-desktop/).
   * Stop containers
@@ -67,9 +67,10 @@ pip install - r requirements.txt
 ```
 ### Create Topic
 ```shell
-python create_topic.py [ --np <number of partitions> ] [ --rf <replication factors> ]
+python create_topic.py [ --config <config file path> ] [ --topic_config <topic config file path> ]
 ```
-* Number of partitions ans replication factors is set to 1 by default.
+* config file path is set to "_config/v1.ini_" by default.
+  * topic config file path is set to "_config/topic/v1.ini_" by default.
 
 ### Publish Messages
 * You need to execute Flask server first.
@@ -77,16 +78,16 @@ python create_topic.py [ --np <number of partitions> ] [ --rf <replication facto
   python flaskserver.py
   ```
 * Test API: GET http://localhost/sensordata/10
-  * You shoud receive 200 status.
+  * You should receive 200 status.
 ```shell
-python publish_topic.py [--count <number of data> ] [ --delay <delay sec per publishing> ]
+python publish_topic.py [ --count <number of data> ] [ --delay <delay sec per publishing> ]
 ```
 * Number of data is set to 10 and delay of per publishing is set to 0.5sec by default.
 
 ### Consume Messages
 
 ```shell
-python consume_data.py
+python consume_data.py [ --config <config file path> ]
 ```
 
 * Since consumer is executed under infinite loop, you need to signal Ctrl+C interrupt to exit program.
