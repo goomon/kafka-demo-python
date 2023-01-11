@@ -1,11 +1,9 @@
-import logging
 import json
-import sys
+import linecache
 from configparser import ConfigParser
 
 from confluent_kafka import Producer
 from flask import Flask
-import linecache
 
 from callback.producer_callback import delivery_callback
 
@@ -14,17 +12,13 @@ app = Flask(__name__)
 # Constants
 RAW_SENSOR_DATA = "raw_sensor_data"
 
-# Logging options
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-logger.addHandler(logging.StreamHandler(sys.stdout))
-
 # Producer settings
 config_parser = ConfigParser()
 config_parser.read("config/v1.ini")
 config = dict(config_parser["default"])
 config.update(config_parser["producer"])
 producer = Producer(config)
+
 
 @app.route("/sensordata/<int:line_num>")
 def generate_data(line_num):

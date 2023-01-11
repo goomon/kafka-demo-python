@@ -1,14 +1,12 @@
-import logging
-import requests
-import sys
 import time
 from argparse import ArgumentParser
 
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-logger.addHandler(logging.StreamHandler(sys.stdout))
+import requests
+
+from logger.TestLogger import TestLogger
 
 if __name__ == "__main__":
+    logger = TestLogger()
     parser = ArgumentParser(prog="publish_data")
     parser.add_argument("--count", type=int, default=10)
     parser.add_argument("--delay", type=float, default=0.5)

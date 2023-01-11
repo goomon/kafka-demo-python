@@ -1,15 +1,16 @@
 from argparse import ArgumentParser, FileType
 from configparser import ConfigParser
 
-from dotenv import load_dotenv
 from confluent_kafka.admin import AdminClient, NewTopic
+from dotenv import load_dotenv
 
 load_dotenv(verbose=True)
 
 if __name__ == "__main__":
     parser = ArgumentParser(prog="create_topic")
     parser.add_argument("--config", type=FileType("r"), default="config/v1.ini", help="default config file path")
-    parser.add_argument("--topic_config", type=FileType("r"), default="config/topic/v1.ini", help="topic config file path")
+    parser.add_argument("--topic_config", type=FileType("r"), default="config/topic/v1.ini",
+                        help="topic config file path")
     args = parser.parse_args()
 
     config_parser = ConfigParser()

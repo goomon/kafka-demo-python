@@ -1,23 +1,21 @@
-import logging
 import json
-import sys
 import time
 from argparse import ArgumentParser, FileType
 from configparser import ConfigParser
 from copy import deepcopy
-
-from confluent_kafka import Consumer, Producer
 from datetime import datetime, timedelta
 
-from callback.producer_callback import delivery_callback
+from confluent_kafka import Consumer, Producer
 
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-logger.addHandler(logging.StreamHandler(sys.stdout))
+from callback.producer_callback import delivery_callback
+from logger.TestLogger import TestLogger
 
 RAW_SENSOR_DATA = "raw_sensor_data"
 PREPROCESSED_DATA = "preprocessed_data"
 FEATURE_DATA = "feature_data"
+
+logger = TestLogger()
+
 
 def preprocess_data(msg):
     json_loads = json.loads(msg)
@@ -29,6 +27,7 @@ def preprocess_data(msg):
     mock_data["y"] = float(json_loads["y"]) if json_loads.get("y") else None
     mock_data["z"] = float(json_loads["z"]) if json_loads.get("z") else None
     return mock_data
+
 
 def feature_extraction(msg_buf, mode, start_time):
     # 어디까지 데이터 읽을 것인지 마지막 시점 설정해야 함 (lastTime가지고 설정)
@@ -67,6 +66,7 @@ def feature_extraction(msg_buf, mode, start_time):
         producer2.produce(FEATURE_DATA, json.dumps(feature_data))
         producer2.flush()
         return True
+
 
 if __name__ == "__main__":
     parser = ArgumentParser(prog="consume_data")
