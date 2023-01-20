@@ -1,6 +1,9 @@
 # Kafka demo
 ## Kafka Environment settings
 
+Base docker-based architecture is as follows:
+![img.png](image/img.png)
+
 ```shell
 docker-compose -f <target-file> up [-d]
 ```
