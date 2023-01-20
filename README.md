@@ -6,12 +6,13 @@ docker-compose -f <target-file> up [-d]
 ```
 * Target file
 
-    You should write the commands below in `docker/` directory. Otherwise, volume files are created in project root directory.
+    You should execute the commands below in `docker/` directory. Otherwise, volume files are created in project root directory.
     * `docker/kafka-single.yml`
   
         This is for single kafka broker and single zookeeper environment.
         ```shell
-      docker-compose -f kafka-single.yml up
+      $ pwd # <your path>/python-kafka/docker
+      $ docker-compose -f kafka-single.yml up
         ```
 
     * `docker/kafka-cluster.yml`
@@ -19,6 +20,13 @@ docker-compose -f <target-file> up [-d]
         This is for kafka basic cluster environment with 3 broker and 3 zookeepers.
       ```shell
       docker-compose -f kafka-cluster.yml up
+        ```
+
+    * `docker/kafka-monitoring.yml`_**(2023.01.20 updated)**_
+    
+        This is for kafka single broker with ELF monitoring system.
+      ```shell
+      docker-compose -f kafka-monitoring.yml up
         ```
 * Basic commands
     
@@ -55,10 +63,16 @@ If the cluster setting is not working, it might be due to those two reasons.
         
     You should increase the CPU and memory resources that docker can use in Docker Desktop. You can modify the limitation in Docker **_Desktop > Preferences > Resources_**.
 
-## Kafka Monitoring
+## Kafka Monitoring (2023.01.20 updated)
 You can use kafka monitoring system AKHQ. You can find out more information in [here](https://akhq.io/).
 * How to access: http://localhost:8080
 * (Recommended) Live tail option is really useful to track kafka records in real-time.
+
+### ELK monitoring system
+You can use ELK monitoring system for kafka when you compose-up `kafka-monitoring.yml`. This is only track broker metrics in `docker/logstash/config/jmx_conf`.
+
+* Kibana(monitoring dashboard): http://localhost:5601
+* Elasticsearch: http://localhost:9200
 
 ## Kafka Client
 * python version: Python 3.9
@@ -70,7 +84,7 @@ pip install - r requirements.txt
 python create_topic.py [ --config <config file path> ] [ --topic_config <topic config file path> ]
 ```
 * config file path is set to "_config/v1.ini_" by default.
-  * topic config file path is set to "_config/topic/v1.ini_" by default.
+* topic config file path is set to "_config/topic/v1.ini_" by default.
 
 ### Publish Messages
 * You need to execute Flask server first.
