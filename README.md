@@ -14,6 +14,7 @@ docker-compose -f <target-file> up [-d]
   
         This is for single kafka broker and single zookeeper environment.
         ```shell
+      $ cd docker/
       $ pwd # <your path>/python-kafka/docker
       $ docker-compose -f kafka-single.yml up
         ```
@@ -22,29 +23,29 @@ docker-compose -f <target-file> up [-d]
     
         This is for kafka basic cluster environment with 3 broker and 3 zookeepers.
       ```shell
-      docker-compose -f kafka-cluster.yml up
+      $ docker-compose -f kafka-cluster.yml up
         ```
 
     * `docker/kafka-monitoring.yml`_**(2023.01.20 updated)**_
     
-        This is for kafka single broker with ELF monitoring system.
+        This is for kafka single broker with ELK monitoring system.
       ```shell
-      docker-compose -f kafka-monitoring.yml up
+      $ docker-compose -f kafka-monitoring.yml up
         ```
 * Basic commands
     
     This section is for basic commands to control docker based environment. You can also use them in GUI environment with [Docker Desktop](https://www.docker.com/products/docker-desktop/).
   * Stop containers
      ```shell
-    docker-compose -f <target-file> stop
+    $ docker-compose -f <target-file> stop
     ```
   * Remove containers
      ```shell
-    docker-compose -f <target-file> down
+    $ docker-compose -f <target-file> down
     ```
   * Remove container volume
      ```shell
-    docker volume prune -y
+    $ docker volume prune -y
     ```
 
 ### Error Handling
@@ -53,13 +54,13 @@ If the cluster setting is not working, it might be due to those two reasons.
     
     I recommend you to remove shared volume file and try it again.
     ```shell
-   rm -rf docker/kafka docker/zookeeper
-   docker volume prune
-   docker-compose -f <traget-file> up
+   $ rm -rf docker/kafka docker/zookeeper
+   $ docker volume prune
+   $ docker-compose -f <traget-file> up
    ```
    Otherwise, you need to change authentication in file by using `chmod` linux commands
    ```shell
-    sudo chmod u+w docker/
+   $ sudo chmod u+w docker/
     ```
    
 2. Docker resources problems.
@@ -80,31 +81,78 @@ You can use ELK monitoring system for kafka when you compose-up `kafka-monitorin
 ## Kafka Client
 * python version: Python 3.9
 ```shell
-pip install - r requirements.txt
+$ pip install - r requirements.txt
 ```
 ### Create Topic
 ```shell
-python create_topic.py [ --config <config file path> ] [ --topic_config <topic config file path> ]
+$ python create_topic.py [ --config <config file path> ] [ --topic_config <topic config file path> ]
 ```
 * config file path is set to "_config/v1.ini_" by default.
 * topic config file path is set to "_config/topic/v1.ini_" by default.
 
 ### Publish Messages
 * You need to execute Flask server first.
-    ```
-  python flaskserver.py
+    ```shell
+  $ python flaskserver.py
   ```
 * Test API: GET http://localhost/sensordata/10
   * You should receive 200 status.
 ```shell
-python publish_topic.py [ --count <number of data> ] [ --delay <delay sec per publishing> ]
+$ python publish_topic.py [ --count <number of data> ] [ --delay <delay sec per publishing> ]
 ```
 * Number of data is set to 10 and delay of per publishing is set to 0.5sec by default.
+
+### Publish Sensor data(2023.01.31 updated)
+
+* This demo is based on WESED dataset.
+* You need to download WESED dataset and unzip each subject data.
+* This is just for demo, so it only dealwith `ACC.csv`, `EDA.csv` and `HR.csv` data.
+* Tree structure of `data/` directory is as follows:
+    ```text
+    data
+    └── WESED
+      ├ S2
+      │ ├── ACC.csv
+      │ ├── BVP.csv
+      │ ├── EDA.csv
+      │ ├── HR.csv
+      │ ├── IBI.csv
+      │ ├── TEMP.csv
+      │ ├── info.txt
+      │ ├── ...
+      │ └── tags.csv
+      ├ S3
+      │ ├── ACC.csv
+      │ ├── BVP.csv
+      │ ├── EDA.csv
+      │ ├── HR.csv
+      │ ├── IBI.csv
+      │ ├── TEMP.csv
+      │ ├── info.txt
+      │ ├── ...
+      │ └── tags.csv
+      ├ S4
+      │ ├── ACC.csv
+      │ ├── BVP.csv
+      │ ├── EDA.csv
+      │ ├── HR.csv
+      │ ├── IBI.csv
+      │ ├── TEMP.csv
+      │ ├── info.txt
+      │ ├── ...
+      │ └── tags.csv
+      └── wesad_readme.pdf
+    ```
+  
+* For publishing sample data, execute `datagen.py`.
+  ```shell
+  $ python datagen.py
+  ```
 
 ### Consume Messages
 
 ```shell
-python consume_data.py [ --config <config file path> ]
+$ python consume_data.py [ --config <config file path> ]
 ```
 
 * Since consumer is executed under infinite loop, you need to signal Ctrl+C interrupt to exit program.
