@@ -2,3 +2,5 @@
 venv/
 /docker/kafka
 /docker/zookeeper
+
+/data
