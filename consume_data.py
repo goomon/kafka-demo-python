@@ -1,4 +1,5 @@
 import json
+import random
 import time
 from argparse import ArgumentParser, FileType
 from configparser import ConfigParser
@@ -286,6 +287,51 @@ def feature_extraction(msg_buf, mode, start_time):  # (DataFrame, ?, datetime)
         producer2.produce(FEATURE_DATA, json.dumps(df_feat))
         producer2.flush()
         return True
+
+
+def extract_phenotype_from_features_and_labels(user_feature_df=None):
+    # later we will pick up user_df from producer
+    # now, generate assuming the structure we have
+
+    user_feature_df = generate_sample_feature_data(num_records=100)
+    # print(user_feature_df.dtypes)
+    correlation = compute_pairwise_correlation(user_feature_df)
+
+
+def generate_sample_feature_data(num_records):
+    # Define the data types for each column
+    feature_cols = ["acc_x_mean", "acc_x_std", "acc_y_mean", "acc_y_std",
+                "acc_z_mean", "acc_z_std", "bvp_mean", "bvp_std",
+                "eda_mean", "eda_std", "eda_min", "eda_max",
+                "hr_mean", "hr_std", "hr_min", "hr_max"
+                ]
+    all_cols = feature_cols.copy()
+    all_cols.append("label")
+    user_feature_df = pd.DataFrame(columns=all_cols)
+    generated_feat_label_list = generate_feature_value_pairs(len(all_cols) - 1,
+                                                             num_records)
+    for i in range(num_records):
+        user_feature_df.loc[len(user_feature_df)] = generated_feat_label_list[i]
+    user_feature_df['label'] = user_feature_df['label'].astype(int)
+    return user_feature_df
+
+def generate_feature_value_pairs(len_features, num_rows):
+    feature_label_pairs = []
+    for i in range(num_rows):
+        feature_vals = [random.uniform(-1, 1) for i in range(len_features)]
+        random_label = random.randint(0, 3)  # inclusive
+        # print(f"len_features: {len(feature_vals)}, random_label: {random_label}")
+        feature_vals.append(random_label)
+        feature_label_pairs.append(feature_vals)
+    return feature_label_pairs
+
+def compute_pairwise_correlation(user_feature_df, method='spearman'):
+    assert method in ['pearson', 'kendall', 'spearman']
+    correlations = user_feature_df.corr(method=method)['label']
+    print("correlatations: \n", correlations)
+
+# if __name__ == "__main__":
+#     extract_phenotype_from_features_and_labels()
 
 if __name__ == "__main__":
     parser = ArgumentParser(prog="consume_data")
