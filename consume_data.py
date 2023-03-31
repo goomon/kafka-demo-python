@@ -15,6 +15,8 @@ from itertools import islice
 
 import pandas as pd
 import numpy as np
+from scipy.signal import resample
+
 
 RAW_SENSOR_DATA = "raw_sensor_data"
 PREPROCESSED_DATA = "preprocessed_data"
@@ -26,267 +28,9 @@ SR = 1 # Sampling Rate
 
 logger = TestLogger()
 
-MODALITIES = ["acc", "bvp", "eda", "hr"]
-
-def preprocess_data(msg):
-    # TODO: Load json and transform it to dict
-    #json_loads = json.loads(msg)
-    # tentative mockup data just for testing
-    dict = {
-      "user_id": 1,
-      "timestamp": 12312412312,
-      "value": {
-        "acc": {
-          "hz": 32,
-          "value": [
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-            {"x": 0.1, "y": 0.1, "z": 0.1},
-          ]
-        },
-        "bvp": {
-          "hz": 64,
-          "value": [
-            0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-            0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-            0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-            0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-            0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-            0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-            0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-            0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-            0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-            0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-            0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-            0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-            0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-            0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-            0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-            0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-          ]
-        },
-        "eda": {
-          "hz": 4,
-          "value": [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,]
-        },
-        "hr": {
-          "hz": 1,
-          "value": [0.1, 0.1]
-        }
-      }
-    }
-
-    # (1) Flat columns
-    #int(json_loads["time_stamp"]) if json_loads.get("time_stamp") else None # data validation and create json data dict
-    signal = {}#pd.DataFrame(columns=["acc_x", "acc_y", "acc_z", "bvp", "eda", "hr"])
-    acc_x = []
-    acc_y = []
-    acc_z = []
-    for sample in dict["value"]["acc"]["value"]:
-        acc_x.append(sample["x"])
-        acc_y.append(sample["y"])
-        acc_z.append(sample["z"])
-    signal["acc_x"] = np.array(acc_x)
-    signal["acc_y"] = np.array(acc_y)
-    signal["acc_z"] = np.array(acc_z)
-    signal["bvp"] = np.array(dict["value"]["bvp"]["value"])
-    signal["eda"] = np.array(dict["value"]["eda"]["value"])
-    signal["hr"] = np.array(dict["value"]["hr"]["value"])
-
-    print("COMPLETE: (1) Flat columns")
-
-    #data_all["x"] = float(json_loads["x"]) if json_loads.get("x") else None
-    #data_all["y"] = float(json_loads["y"]) if json_loads.get("y") else None
-    #data_all["z"] = float(json_loads["z"]) if json_loads.get("z") else None
-
-    # (2) Downsampling
-    # calculate the lowest sampling rate
-    lowest_sr = 256
-    for modal in MODALITIES:
-        modal_sr = dict["value"][modal]["hz"]
-        lowest_sr = modal_sr if modal_sr < lowest_sr else lowest_sr
-    def downsampling(rows, proportion=1):
-        return list(islice(rows, 0, len(rows), int(1/proportion)))
-    signal["acc_x"] = downsampling(rows=signal["acc_x"], proportion=lowest_sr/dict["value"]["acc"]["hz"])
-    signal["acc_y"] = downsampling(rows=signal["acc_y"], proportion=lowest_sr / dict["value"]["acc"]["hz"])
-    signal["acc_z"] = downsampling(rows=signal["acc_z"], proportion=lowest_sr / dict["value"]["acc"]["hz"])
-    signal["bvp"] = downsampling(rows=signal["bvp"], proportion=lowest_sr / dict["value"]["bvp"]["hz"])
-    signal["eda"] = downsampling(rows=signal["eda"], proportion=lowest_sr / dict["value"]["eda"]["hz"])
-    signal["hr"] = downsampling(rows=signal["hr"], proportion=lowest_sr / dict["value"]["hr"]["hz"])
-
-    print("COMPLETE: (2) Downsampling")
-
-    # (3) Generate timestamp & Merge arrays to DataFrame
-    df = pd.DataFrame(columns=["ts", "acc_x", "acc_y", "acc_z", "bvp", "eda", "hr"])
-    start_ts = dict["timestamp"]
-    for i in range(len(signal["acc_x"])):
-        curr_ts = datetime.fromtimestamp(start_ts) + timedelta(seconds=(i*(1/lowest_sr)))
-        df = df.append({"ts": int(time.mktime(curr_ts.timetuple())),
-                   "acc_x":signal["acc_x"][i],
-                   "acc_y": signal["acc_y"][i],
-                   "acc_z": signal["acc_z"][i],
-                   "bvp": signal["bvp"][i],
-                   "eda": signal["eda"][i],
-                   "hr": signal["hr"][i],
-                   },
-                  ignore_index=True)
-
-    print("COMPLETE: (3) Generate timestamp & Merge arrays to DataFrame")
-
-    # (4) Drop samples with missing data
-    df = df.dropna(axis=0)
-    df.set_index(keys="ts", inplace=True, drop=True)
-    df.index = df.index.astype(int)
-
-    return df, lowest_sr
+SENSOR_COLUMNS = ['chestAcc', "chestECG", "chestEMG", "chestEDA", "chestTemp", "chestResp"]
 
 
-def feature_extraction(msg_buf, mode, start_time):  # (DataFrame, ?, datetime)
-    # 어디까지 데이터 읽을 것인지 마지막 시점 설정해야 함 (lastTime가지고 설정)
-
-    # (1) Calculate start and end timestamps
-    # end_time = start_time + timedelta(seconds=WINDOW_SIZE)
-    start_ts = time.mktime(start_time.timetuple())
-    end_ts = time.mktime((start_time + timedelta(seconds=WINDOW_SIZE)).timetuple())
-
-    WINDOW_LEN = int(WINDOW_SIZE / SR)
-    # (2) Extract features
-    FEATURES = ["acc_x_mean", "acc_x_std", "acc_y_mean", "acc_y_std", "acc_z_mean", "acc_z_std",
-                "bvp_mean", "bvp_std",
-                "eda_mean", "eda_std", "eda_min", "eda_max"
-                                                  "hr_mean", "hr_std", "hr_min", "hr_max"]
-    sample_df = msg_buf[(msg_buf.index >= int(start_ts)) & (msg_buf.index <= int(end_ts))]
-    # TODO: For now, I assume that there is a matched ts in df with start_time.
-    sample_feat = {}
-
-    # Accelerometer features
-    acc_x_vals = sample_df["acc_x"].values[:]
-    acc_y_vals = sample_df["acc_y"].values[:]
-    acc_z_vals = sample_df["acc_z"].values[:]
-    sample_feat["acc_x_mean"] = np.mean(acc_x_vals)
-    sample_feat["acc_x_std"] = np.std(acc_x_vals)
-    sample_feat["acc_y_mean"] = np.mean(acc_y_vals)
-    sample_feat["acc_y_std"] = np.std(acc_y_vals)
-    sample_feat["acc_z_mean"] = np.mean(acc_z_vals)
-    sample_feat["acc_z_std"] = np.std(acc_z_vals)
-
-    # BVP features
-    bvp_vals = sample_df["bvp"].values[:]
-    sample_feat["bvp_mean"] = np.mean(bvp_vals)
-    sample_feat["bvp_std"] = np.std(bvp_vals)
-
-    # EDA features
-    eda_vals = sample_df["eda"].values[:]
-    sample_feat["eda_mean"] = np.mean(eda_vals)
-    sample_feat["eda_std"] = np.std(eda_vals)
-    sample_feat["eda_min"] = np.min(eda_vals)
-    sample_feat["eda_max"] = np.max(eda_vals)
-
-    # Heart Rate
-    hr_vals = sample_df["hr"].values[:]
-    sample_feat["hr_mean"] = np.mean(hr_vals)
-    sample_feat["hr_std"] = np.std(hr_vals)
-    sample_feat["hr_min"] = np.min(hr_vals)
-    sample_feat["hr_max"] = np.max(hr_vals)
-
-    sample_feat["ts"] = start_time
-
-    # (3) dict to DataFrame
-    df_feat = pd.DataFrame(columns=["ts",
-                                        "acc_x_mean", "acc_x_std", "acc_y_mean", "acc_y_std", "acc_z_mean", "acc_z_std",
-                                        "bvp_mean", "bvp_std",
-                                        "eda_mean", "eda_std", "eda_min", "eda_max"
-                                      "hr_mean", "hr_std", "hr_min", "hr_max"])
-    df_feat = df_feat.append(sample_feat, ignore_index = True)
-
-    if mode == 1:
-        '''
-        for i in range(len(msg_buf)):
-        avg_x += msg_buf[i]["x"]
-        avg_y += msg_buf[i]["y"]
-        avg_z += msg_buf[i]["z"]
-
-        feature_data["time_stamp"] = float(time.time())
-        feature_data["x"] = avg_x / len(msg_buf)
-        feature_data["y"] = avg_y / len(msg_buf)
-        feature_data["z"] = avg_z / len(msg_buf)
-        '''
-        producer2.produce(FEATURE_DATA, json.dumps(df_feat), callback=delivery_callback)
-        producer2.flush()
-        return True
-    else:
-        '''
-        for i in range(len(msg_buf)):
-            temp_time = datetime.fromtimestamp(time.time())
-            if temp_time >= start_time and temp_time <= end_time:
-                avg_x += msg_buf[i]["x"]
-                avg_y += msg_buf[i]["y"]
-                avg_z += msg_buf[i]["z"]
-        '''
-        producer2.produce(FEATURE_DATA, json.dumps(df_feat))
-        producer2.flush()
-        return True
 
 
 def extract_phenotype_from_features_and_labels(user_feature_df=None):
@@ -333,6 +77,121 @@ def compute_pairwise_correlation(user_feature_df, method='spearman'):
 # if __name__ == "__main__":
 #     extract_phenotype_from_features_and_labels()
 
+def manage_raw_data_buffer(msg_value, org_raw_msg_df):
+    print(f"----- in manage_raw_data_buffer() ---- org_raw_msg_df: {len(org_raw_msg_df)}-----")
+
+    can_extract_features = False
+    raw_msg_df = org_raw_msg_df
+    data_to_process = None
+    STATIC_TGT_SAMPLING_RATE = 4  # fixed; target
+    arrived_timestamp = int(time.time()) * 1000
+
+    template_row = {'label': msg_value['label'],
+                    'timestamp': msg_value['timestamp'],
+                    'user_id': msg_value['user_id'],
+                    'arrived_timestamp': arrived_timestamp}
+
+    fresh_df = pd.DataFrame(
+        columns=['chestAcc', "chestECG", "chestEMG", "chestEDA", "chestTemp", "chestResp", "label", "user_id",
+                 "timestamp", "arrived_timestamp"])
+
+    feat_value_dict = {}
+    for feat_col in SENSOR_COLUMNS:
+        values = msg_value['value'][feat_col]['value']
+        sampling_rate = msg_value['value'][feat_col]['hz']
+        # print(f"====== sampling_rate: {sampling_rate}, feat_col: {feat_col}, values: {values}")
+        if sampling_rate > STATIC_TGT_SAMPLING_RATE:
+            source_signal = np.array(values)
+            downsample_ratio = sampling_rate // STATIC_TGT_SAMPLING_RATE
+            downsampled_signal_length = int(np.ceil(source_signal.size / downsample_ratio))
+            downsampled_signal = resample(source_signal, downsampled_signal_length)
+            values = downsampled_signal.item()
+
+        elif sampling_rate < STATIC_TGT_SAMPLING_RATE:
+            source_signal = np.array(values)
+            upsample_ratio = STATIC_TGT_SAMPLING_RATE // sampling_rate
+            upsampled_signal_length = int(np.ceil(source_signal.size / upsample_ratio))
+            upsampled_signal = resample(source_signal, upsampled_signal_length)
+            values = upsampled_signal.item()
+
+        feat_value_dict[feat_col] = values
+    # print(f"feat_value_dict: {feat_value_dict}")
+    for i in range(0, STATIC_TGT_SAMPLING_RATE):
+        one_row_dict = template_row.copy()
+        start_timestamp = template_row['timestamp']
+        one_row_dict['timestamp'] = start_timestamp + (i * 250)
+        for feat_col in SENSOR_COLUMNS:
+            one_row_dict[feat_col] = feat_value_dict[feat_col][i]
+
+        one_row_df = pd.DataFrame([one_row_dict])
+
+        fresh_df = pd.concat([fresh_df, one_row_df.copy()], ignore_index=True)
+    # print(f"=========fresh data arrived: \n{fresh_df.head()}")
+    # 0. If dataframe is empty
+    if len(org_raw_msg_df) == 0:
+        print(f" == org raw_msg_df was empty. add new data, and go......")
+        raw_msg_df = fresh_df.copy() # new global data
+        del fresh_df
+    else:
+        corresponding_df = raw_msg_df[(raw_msg_df['user_id'] == msg_value['user_id']) & (raw_msg_df['label'] == msg_value['label'])]
+        if len(corresponding_df) == 0:
+            raw_msg_df = pd.concat([raw_msg_df, fresh_df], ignore_index=True)
+        else:
+            # 1. Check for duplicates based on user and timestamp
+            duplicate = corresponding_df[corresponding_df['timestamp'] == msg_value['timestamp']]
+            if len(duplicate) != 0:
+                # drop data
+                pass
+            else:
+                corresponding_df.sort_values(by=['timestamp'], ascending=True, inplace=True)
+                latest_timestamp = corresponding_df['timestamp'].iloc[-1]
+                if (msg_value['timestamp'] - latest_timestamp) == 250:
+                    print(f"========== Can preprocess ooooh yyyyeeey =================")
+
+                    merged_df = pd.concat([corresponding_df[-STATIC_TGT_SAMPLING_RATE:], fresh_df], ignore_index=True)
+                    data_to_process = merged_df.copy()
+                    can_extract_features = True
+                    raw_msg_df = pd.concat([raw_msg_df, fresh_df], ignore_index=True)
+
+                else:
+                    # print(f"========== Timestamp is not recent. Cannot merge, just add this new data")
+                    raw_msg_df = pd.concat([raw_msg_df, fresh_df], ignore_index=True)
+
+
+    if can_extract_features:
+        print(f"----------- This data will go to pre-process: --------------")
+        # print(f"{data_to_process.head(8)}")
+    return can_extract_features, data_to_process, raw_msg_df
+
+def get_feature_columns():
+    feature_columns = []
+    feature_columns.extend(['user_id', 'label', 'timestamp', 'arrived_timestamp'])
+    for s_col in SENSOR_COLUMNS:
+        if s_col in ['chestAcc', "chestECG", "chestEMG", "chestEDA", "chestTemp", "chestResp"]:
+            feat_types = ["mean", "std", "max", "min"]
+            feature_columns.extend([f"{s_col}_{feat_type}" for feat_type in feat_types])
+    return feature_columns
+
+def extract_features(df):
+    feature_dict = {
+        'user_id': df['user_id'].iloc[0],
+        'label': df['label'].iloc[0],
+        'timestamp': df['timestamp'].iloc[0],
+        'arrived_timestamp': df['arrived_timestamp'].iloc[0]
+    }
+    for s_col in SENSOR_COLUMNS:
+        if s_col in ['chestAcc', "chestECG", "chestEMG", "chestEDA", "chestTemp", "chestResp"]:
+            feature_dict[f"{s_col}_mean"] = np.mean(df[f'{s_col}'].values[:])
+            feature_dict[f'{s_col}_std'] = np.std(df[f'{s_col}'].values[:])
+            feature_dict[f"{s_col}_max"] = np.max(df[f'{s_col}'].values[:])
+            feature_dict[f'{s_col}_min'] = np.min(df[f'{s_col}'].values[:])
+        # if we want to extract diff feature for specific sensor, add here
+            # else ..
+    feature_df = pd.DataFrame([feature_dict])
+
+    print(f"================ Extracted features: ============\n{feature_df.head()}")
+    return feature_df
+
 if __name__ == "__main__":
     parser = ArgumentParser(prog="consume_data")
     parser.add_argument("--config", type=FileType("r"), default="config/v1.ini", help="config file path")
@@ -360,8 +219,11 @@ if __name__ == "__main__":
     is_first = True
     is_feature_engineering = True
     last_updated = datetime.now()
-    #msg_buf = []
-    msg_buf = pd.DataFrame(columns=["ts", "acc_x", "acc_y", "acc_z", "bvp", "eda", "hr"])
+    msg_buf = []
+    raw_msg_df = pd.DataFrame(columns=['chestAcc',  "chestECG",  "chestEMG",  "chestEDA",  "chestTemp", "chestResp",  "label", "user_id", "timestamp", "arrived_timestamp"])
+    feature_columns = get_feature_columns()
+    feature_buffer_df = pd.DataFrame(columns=feature_columns)
+
     consumer.subscribe([RAW_SENSOR_DATA])
     try:
         while True:
@@ -373,8 +235,26 @@ if __name__ == "__main__":
             else:
                 logger.debug(f"Consumes event from topic {msg.topic()}")
                 current_time = datetime.now()
+                # 1. Convert to readable message from bytes
+                msg_value = msg.value()
+                # Decode the bytes data to a string
+                string_data = msg_value.decode('utf-8')
+                # Load the string data into a Python dictionary
+                msg_value = json.loads(string_data)
+                print(f"message timestamp: {msg_value['timestamp']} ==============")
+
+                # 2. Manage queue
+                can_extract_features, data_to_process, raw_msg_df = manage_raw_data_buffer(msg_value, raw_msg_df.copy())
+                if can_extract_features:
+                    feature_df = extract_features(data_to_process)
+                    # Add to feature buffer
+                    feature_buffer_df = pd.concat([feature_buffer_df, feature_df], ignore_index=True)
+                    print(f":::::::::::::::::::::::::: Feature buffer df: {len(feature_buffer_df)}::::::::::::::")
+                """
+
                 data, SR = preprocess_data(msg.value()) # pd.DataFrame, samplingrate
                 msg_buf = msg_buf.append(data, ignore_index=True)
+                
                 producer1.produce(PREPROCESSED_DATA, json.dumps(data), callback=delivery_callback)
                 producer1.flush()
 
@@ -396,6 +276,8 @@ if __name__ == "__main__":
                                 # 다음 Time window 시작점 셋업: lastUpdated = lastUpdated + samplingCycle
                                 last_updated = last_updated + timedelta(seconds=sampling_cycle)
                                 is_feature_engineering = True
+                                
+                """
     except KeyboardInterrupt:
         pass
     finally:

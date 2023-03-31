@@ -14,13 +14,13 @@ app = Flask(__name__)
 RAW_SENSOR_DATA = "raw_sensor_data"
 
 # Producer settings
-"""
+# """
 config_parser = ConfigParser()
 config_parser.read("config/v1.ini")
 config = dict(config_parser["default"])
 config.update(config_parser["producer"])
 producer = Producer(config)
-"""
+
 
 DEBUG = "DEBUG"
 ERROR = "ERROR"
@@ -54,7 +54,7 @@ def read_wesad_data():
     df = pd.read_csv(file_path)
     print(f"[{DEBUG}] === Took {time.time() - st_load} seconds to load ===")
 
-    n_rows = 4
+    n_rows = 4 # 4hz, we are sending one sec data
     start_idx = 0
     end_idx = 0
     cols = ['chestAcc',  "chestECG",  "chestEMG",  "chestEDA",  "chestTemp", "chestResp",  "label", "user_id", "timestamp"]
@@ -75,24 +75,26 @@ def read_wesad_data():
             formatted_one_sec_data['timestamp'] = one_second_data['timestamp'][0]
             formatted_one_sec_data['label'] = one_second_data['label'][0]
             formatted_one_sec_data['value'] = {}
+            # formatted_one_sec_data['length_in_seconds'] = n_rows // in case of dynamic windows
             for feat_col in feat_cols:
                 formatted_one_sec_data['value'][feat_col] = {}
                 formatted_one_sec_data['value'][feat_col]['hz'] = n_rows
                 formatted_one_sec_data['value'][feat_col]['value'] = one_second_data[feat_col]
 
             print(f"Formatted data we will send: {formatted_one_sec_data}")
-            # producer.produce(RAW_SENSOR_DATA, json.dumps(one_second_data), callback=delivery_callback)
-            # producer.flush()
-            # json.dumps({"success": True}), 200, {"ContentType": "application/json"}
+            producer.produce(RAW_SENSOR_DATA, json.dumps(formatted_one_sec_data), callback=delivery_callback)
+            producer.flush()
+            json.dumps({"success": True}), 200, {"ContentType": "application/json"}
             print(f"[{DEBUG}] Produced data with indices: {start_idx}:{end_idx-1}")
         except RuntimeError:
-            # json.dumps({"success": False}), 404, {"ContentType": "application/json"}
+            json.dumps({"success": False}), 404, {"ContentType": "application/json"}
             print(f"[{ERROR}] Failed to produce data with indices: {start_idx}:{end_idx-1}")
 
         # break
         start_idx = end_idx
         if start_idx + n_rows >= len(df):
             break
+    return json.dumps({"success": True}), 200, {"ContentType": "application/json"}
 
 
 @app.route("/")
@@ -110,9 +112,9 @@ def generate_random_data():
 
 
 
-# if __name__ == "__main__":
-#     app.run(host="0.0.0.0", port=3030)
-
 if __name__ == "__main__":
-    read_wesad_data()
+    app.run(host="0.0.0.0", port=3030)
+
+# if __name__ == "__main__":
+#     read_wesad_data()
 
