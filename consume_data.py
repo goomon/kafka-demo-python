@@ -16,6 +16,10 @@ from itertools import islice
 import pandas as pd
 import numpy as np
 from scipy.signal import resample
+import joblib
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
 
 
 RAW_SENSOR_DATA = "raw_sensor_data"
@@ -192,6 +196,23 @@ def extract_features(df):
     print(f"================ Extracted features: ============\n{feature_df.head()}")
     return feature_df
 
+def predict_stress(feature_df):
+    # Fetch model checkpoints
+    model = joblib.load('./models/small_model_checkpoint.joblib')
+    feat_cols = feature_df.columns.tolist()
+    feat_cols = feat_cols[4:]
+    print("=========== feat cols:::::::", feat_cols)
+    X = feature_df[feat_cols]
+    y = feature_df['label']
+    print(f"===== ")
+    X, y = X.values, y.values
+    predicted_y = model.predict(X)
+    print(f"\n-----------------------------")
+    print(f"predicted_y: {predicted_y}, y: {y}, are they same? {predicted_y.item() == y}")
+    print(f"\n-----------------------------")
+    return predicted_y.item()
+
+
 if __name__ == "__main__":
     parser = ArgumentParser(prog="consume_data")
     parser.add_argument("--config", type=FileType("r"), default="config/v1.ini", help="config file path")
@@ -247,6 +268,10 @@ if __name__ == "__main__":
                 can_extract_features, data_to_process, raw_msg_df = manage_raw_data_buffer(msg_value, raw_msg_df.copy())
                 if can_extract_features:
                     feature_df = extract_features(data_to_process)
+
+                    predicted_stress_result = predict_stress(feature_df)
+
+                    print(f"Predicted stress result is: {predicted_stress_result}")
                     # Add to feature buffer
                     feature_buffer_df = pd.concat([feature_buffer_df, feature_df], ignore_index=True)
                     print(f":::::::::::::::::::::::::: Feature buffer df: {len(feature_buffer_df)}::::::::::::::")
