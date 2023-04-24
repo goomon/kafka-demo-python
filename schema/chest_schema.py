@@ -1,33 +1,64 @@
-# {
-#   "user_id": 1,
-#   "timestamp": 12312412312,
-#   "value": [{
-#     "chest_acc": {
-#       "hz": 700,
-#       "value": []
-#     },
-#     "chest_ecg": {
-#       "hz": 700,
-#       "value": []
-#     },
-#     "chest_eda": {
-#       "hz": 700,
-#       "value": []
-#     },
-#     "chest_emg": {
-#       "hz": 700,
-#       "value": []
-#     },
-#     "chest_temp": {
-#       "hz": 700,
-#       "value": []
-#     },
-#     "chest_resp": {
-#       "hz": 700,
-#       "value": []
-#     }
-#   }
-# }
+"""
+{
+  "user_id": 1,
+  "timestamp": 12312412312,
+  "window_size": 2,
+  "value": [
+    {
+      "chest_acc": {
+        "hz": 700,
+        "value": [...]
+      },
+      "chest_ecg": {
+        "hz": 700,
+        "value": [...]
+      },
+      "chest_eda": {
+        "hz": 700,
+        "value": [...]
+      },
+      "chest_emg": {
+        "hz": 700,
+        "value": [...]
+      },
+      "chest_temp": {
+        "hz": 700,
+        "value": [...]
+      },
+      "chest_resp": {
+        "hz": 700,
+        "value": [...]
+      }
+    },
+    {
+      "chest_acc": {
+        "hz": 700,
+        "value": [...]
+      },
+      "chest_ecg": {
+        "hz": 700,
+        "value": [...]
+      },
+      "chest_eda": {
+        "hz": 700,
+        "value": [...]
+      },
+      "chest_emg": {
+        "hz": 700,
+        "value": [...]
+      },
+      "chest_temp": {
+        "hz": 700,
+        "value": [...]
+      },
+      "chest_resp": {
+        "hz": 700,
+        "value": [...]
+      }
+    }
+  ]
+}
+"""
 
 from typing import TypedDict, List
 
