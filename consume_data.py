@@ -14,6 +14,7 @@ from logger.TestLogger import TestLogger
 from itertools import islice
 
 import pandas as pd
+import random
 import numpy as np
 from scipy.signal import resample
 import joblib
@@ -32,8 +33,11 @@ SR = 1 # Sampling Rate
 
 logger = TestLogger()
 
-SENSOR_COLUMNS = ['chestAcc', "chestECG", "chestEMG", "chestEDA", "chestTemp", "chestResp"]
-
+#SENSOR_COLUMNS = ['chestAcc', "chestECG", "chestEMG", "chestEDA", "chestTemp", "chestResp"]
+SENSOR_COLUMNS = ["chest_acc", "chest_ecg","chest_eda",
+            "chest_emg",
+            "chest_temp",
+            "chest_resp"]
 
 
 
@@ -87,30 +91,63 @@ def manage_raw_data_buffer(msg_value, org_raw_msg_df):
     can_extract_features = False
     raw_msg_df = org_raw_msg_df
     data_to_process = None
-    STATIC_TGT_SAMPLING_RATE = 4  # fixed; target
+    # STATIC_TGT_SAMPLING_RATE = 4  # fixed; target
+    STATIC_TGT_SAMPLING_RATE = 700  # fixed; target
     arrived_timestamp = int(time.time()) * 1000
 
-    template_row = {'label': msg_value['label'],
+    template_row = {#'label': msg_value['label'],
                     'timestamp': msg_value['timestamp'],
                     'user_id': msg_value['user_id'],
                     'arrived_timestamp': arrived_timestamp}
 
     fresh_df = pd.DataFrame(
-        columns=['chestAcc', "chestECG", "chestEMG", "chestEDA", "chestTemp", "chestResp", "label", "user_id",
+        columns=["chest_acc", "chest_ecg","chest_eda",
+            "chest_emg",
+            "chest_temp",
+            "chest_resp", "label", "user_id",
                  "timestamp", "arrived_timestamp"])
 
     feat_value_dict = {}
     for feat_col in SENSOR_COLUMNS:
         for i in range(WINDOW_SIZE):
-            values = values.extend(msg_value['value'][i][feat_col]['value'])
-        sampling_rate = msg_value['value'][feat_col]['hz']
+
+            # print(f"msg_value['value'][i][feat_col]['value']: {len(msg_value['value'][i][feat_col]['value'])}")
+            if i ==0:
+                if feat_col == "chest_acc":
+                    values = [random.randint(0, 1000) for _ in range(700)]
+
+                    # values = msg_value['value'][i][feat_col]['value']['x']
+                # print(f"===== msg_value['value']: {msg_value['value']}\n")
+                else:
+                    values = msg_value['value'][i][feat_col]['value']
+
+                # print(f"===== values: {values}\n"
+                #       f"=== type: {type(values)}\n"
+                #       f"=== len: {len(values)}\n")
+            else:
+                if feat_col == "chest_acc":
+                    values.extend([random.randint(0, 1000) for _ in range(700)])
+                else:
+                    values.extend(msg_value['value'][i][feat_col]['value'])
+
+            sampling_rate = msg_value['value'][i][feat_col]['hz']
+
+            # print(f"-------- len values: {len(values)}\n"
+            #       f"--------- sampling_rate: {sampling_rate}\n"
+            #       f"--------- ")
         # print(f"====== sampling_rate: {sampling_rate}, feat_col: {feat_col}, values: {values}")
         if sampling_rate > STATIC_TGT_SAMPLING_RATE:
+
             source_signal = np.array(values)
             downsample_ratio = sampling_rate // STATIC_TGT_SAMPLING_RATE
             downsampled_signal_length = int(np.ceil(source_signal.size / downsample_ratio))
+            # print(f"======= source_signal: {source_signal}\n"
+            #       f"======= type(source_signal): {type(source_signal)}\n"
+            #       f"======= downsampled_signal_length: {downsampled_signal_length}\n")
+
             downsampled_signal = resample(source_signal, downsampled_signal_length)
-            values = downsampled_signal.item()
+            # values = downsampled_signal.item()
+            values = downsampled_signal[0].item()
 
         elif sampling_rate < STATIC_TGT_SAMPLING_RATE:
             source_signal = np.array(values)
