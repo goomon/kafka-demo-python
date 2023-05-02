@@ -101,7 +101,8 @@ def manage_raw_data_buffer(msg_value, org_raw_msg_df):
 
     feat_value_dict = {}
     for feat_col in SENSOR_COLUMNS:
-        values = msg_value['value'][feat_col]['value']
+        for i in range(WINDOW_SIZE):
+            values = values.extend(msg_value['value'][i][feat_col]['value'])
         sampling_rate = msg_value['value'][feat_col]['hz']
         # print(f"====== sampling_rate: {sampling_rate}, feat_col: {feat_col}, values: {values}")
         if sampling_rate > STATIC_TGT_SAMPLING_RATE:
