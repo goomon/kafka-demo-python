@@ -4,3 +4,5 @@ venv/
 /docker/zookeeper
 
 /data
+/kafka_venv
+/jupyter_files
