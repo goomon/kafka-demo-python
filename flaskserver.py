@@ -4,7 +4,7 @@ from configparser import ConfigParser
 
 from confluent_kafka import Producer
 from flask import Flask
-from mock_generator import MockSensorDataGenerator
+from mock_generator_v2 import MockSensorDataGeneratorV2
 
 from callback.producer_callback import delivery_callback
 
@@ -100,7 +100,7 @@ def read_wesad_data():
 @app.route("/")
 def generate_random_data():
     try:
-        mock_generator = MockSensorDataGenerator
+        mock_generator = MockSensorDataGeneratorV2
         simulation_data = mock_generator.generate_data(user_id="sample_user_id")
         producer.produce(RAW_SENSOR_DATA, json.dumps(simulation_data), callback=delivery_callback)
         producer.flush()
@@ -113,7 +113,8 @@ def generate_random_data():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=3030)
+    # app.run(host="0.0.0.0", port=3030)
+    app.run(host="0.0.0.0", port=5678)
 
 # if __name__ == "__main__":
 #     read_wesad_data()

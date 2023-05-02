@@ -1,12 +1,25 @@
 import time
 from collections import defaultdict
 from typing import List, Generator, Optional
-
+from configparser import ConfigParser
+import json
+from confluent_kafka import Producer
+from callback.producer_callback import delivery_callback
 from schema.chest_schema import ChestDeviceSensorRecord, ChestAxis, \
     ChestDeviceSensorValue
 
 SAMPLING_RATE = 700
 
+
+RAW_SENSOR_DATA = "raw_sensor_data"
+
+# Producer settings
+# """
+config_parser = ConfigParser()
+config_parser.read("config/v1.ini")
+config = dict(config_parser["default"])
+config.update(config_parser["producer"])
+producer = Producer(config)
 
 def read_lines(filename: str) -> Generator[str, None, None]:
     if filename is None:
@@ -37,6 +50,7 @@ class MockSensorDataGeneratorV2:
         counter = MockSensorDataGeneratorV2.counter[user_id]
 
         chest_acc: List[ChestAxis] = []
+        #chest_acc: List[int] = []
         chest_ecg: List[int] = []
         chest_eda: List[int] = []
         chest_emg: List[int] = []
@@ -46,7 +60,8 @@ class MockSensorDataGeneratorV2:
         for line in MockSensorDataGeneratorV2.file_reader:
             line = line.split("\t")
             # Sampling rate of Respiban dataset is 700Hz.
-            if cnt > 700:
+            # if cnt > 700:
+            if cnt > 699:
                 break
             cnt += 1
             # Insert sensor data from target file.
@@ -54,6 +69,7 @@ class MockSensorDataGeneratorV2:
             chest_eda.append(int(line[1]))
             chest_emg.append(int(line[2]))
             chest_temp.append(int(line[3]))
+            #chest_acc.append(int(line[4]))
             chest_acc.append({
                 "x": int(line[4]),
                 "y": int(line[5]),
@@ -97,7 +113,25 @@ class MockSensorDataGeneratorV2:
                 "user_id": user_id,
                 "timestamp": timestamp,
                 "window_size": 2,
-                "value": MockSensorDataGeneratorV2.record_queue
+                "value": MockSensorDataGeneratorV2.record_queue,
+                "label":0
+
             }
         else:
             return None
+
+
+def do_simulation():
+    try:
+        mock_generator = MockSensorDataGeneratorV2
+        simulation_data = mock_generator.generate_data(user_id="sample_user_id")
+        producer.produce(RAW_SENSOR_DATA, json.dumps(simulation_data), callback=delivery_callback)
+        producer.flush()
+        return json.dumps({"success": True}), 200, {"ContentType": "application/json"}
+
+    except RuntimeError:
+        return json.dumps({"success": False}), 404, {"ContentType": "application/json"}
+
+if __name__ == "__main__":
+    do_simulation()
+
