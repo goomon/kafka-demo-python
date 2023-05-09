@@ -114,7 +114,7 @@ class MockSensorDataGeneratorV2:
                 "timestamp": timestamp,
                 "window_size": 2,
                 "value": MockSensorDataGeneratorV2.record_queue,
-                "label":0
+                "label": 0
 
             }
         else:

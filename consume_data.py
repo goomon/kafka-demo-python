@@ -28,7 +28,7 @@ PREPROCESSED_DATA = "preprocessed_data"
 FEATURE_DATA = "feature_data"
 
 WINDOW_SIZE = 2
-OVERLAP_RATIO = 0.5
+OVERLAP_RATIO = 0  # 0.5
 SR = 1 # Sampling Rate
 
 logger = TestLogger()
@@ -161,7 +161,7 @@ def manage_raw_data_buffer(msg_value, org_raw_msg_df):
     for i in range(0, STATIC_TGT_SAMPLING_RATE):
         one_row_dict = template_row.copy()
         start_timestamp = template_row['timestamp']
-        one_row_dict['timestamp'] = start_timestamp + (i * 250)
+        one_row_dict['timestamp'] = start_timestamp + (i * 1/STATIC_TGT_SAMPLING_RATE)
         for feat_col in SENSOR_COLUMNS:
             one_row_dict[feat_col] = feat_value_dict[feat_col][i]
 
@@ -176,18 +176,22 @@ def manage_raw_data_buffer(msg_value, org_raw_msg_df):
         del fresh_df
     else:
         corresponding_df = raw_msg_df[(raw_msg_df['user_id'] == msg_value['user_id']) & (raw_msg_df['label'] == msg_value['label'])]
+        print(f"==== Len of corresponding df: {len(corresponding_df)}")
+
         if len(corresponding_df) == 0:
             raw_msg_df = pd.concat([raw_msg_df, fresh_df], ignore_index=True)
         else:
             # 1. Check for duplicates based on user and timestamp
             duplicate = corresponding_df[corresponding_df['timestamp'] == msg_value['timestamp']]
+            print(f"Len duplicates: {len(duplicate)} ..............")
             if len(duplicate) != 0:
                 # drop data
                 pass
             else:
                 corresponding_df.sort_values(by=['timestamp'], ascending=True, inplace=True)
                 latest_timestamp = corresponding_df['timestamp'].iloc[-1]
-                if (msg_value['timestamp'] - latest_timestamp) == 250:
+                print(f" ===== timestamp diff: {msg_value['timestamp'] - latest_timestamp} ====")
+                if (int(msg_value['timestamp'] - latest_timestamp)) == 1: # 250:
                     print(f"========== Can preprocess ooooh yyyyeeey =================")
 
                     merged_df = pd.concat([corresponding_df[-STATIC_TGT_SAMPLING_RATE:], fresh_df], ignore_index=True)
@@ -216,17 +220,30 @@ def get_feature_columns():
 
 def extract_features(df):
     feature_dict = {
-        'user_id': df['user_id'].iloc[0],
-        'label': df['label'].iloc[0],
-        'timestamp': df['timestamp'].iloc[0],
-        'arrived_timestamp': df['arrived_timestamp'].iloc[0]
+        'user_id': df['user_id'],#.iloc[0],
+        'label': df['label'],#.iloc[0],
+        'timestamp': df['timestamp'],#.iloc[0],
+        #'arrived_timestamp': df['arrived_timestamp'],#.iloc[0]
     }
     for s_col in SENSOR_COLUMNS:
-        if s_col in ['chestAcc', "chestECG", "chestEMG", "chestEDA", "chestTemp", "chestResp"]:
-            feature_dict[f"{s_col}_mean"] = np.mean(df[f'{s_col}'].values[:])
-            feature_dict[f'{s_col}_std'] = np.std(df[f'{s_col}'].values[:])
-            feature_dict[f"{s_col}_max"] = np.max(df[f'{s_col}'].values[:])
-            feature_dict[f'{s_col}_min'] = np.min(df[f'{s_col}'].values[:])
+        if s_col in ["chest_acc", "chest_ecg","chest_eda","chest_emg","chest_temp","chest_resp"]:
+            for i in range(WINDOW_SIZE):
+                if i == 0:
+                    if s_col == "chest_acc":
+                        values = [random.randint(0, 1000) for _ in range(700)]
+                        # TODO: handle three values (x, y, z) in chest_acc
+                    else:
+                        values = msg_value['value'][i][s_col]['value']
+                else:
+                    if s_col == "chest_acc":
+                        values.extend([random.randint(0, 1000) for _ in range(700)])
+                    else:
+                        values.extend(msg_value['value'][i][s_col]['value'])
+            print(f"=========== length of streamed data::: {len(values)}")
+            feature_dict[f"{s_col}_mean"] = np.mean(values)
+            feature_dict[f'{s_col}_std'] = np.std(values)
+            feature_dict[f"{s_col}_max"] = np.max(values)
+            feature_dict[f'{s_col}_min'] = np.min(values)
         # if we want to extract diff feature for specific sensor, add here
             # else ..
     feature_df = pd.DataFrame([feature_dict])
@@ -237,8 +254,9 @@ def extract_features(df):
 def predict_stress(feature_df):
     # Fetch model checkpoints
     model = joblib.load('./models/small_model_checkpoint.joblib')
+    print(f"============ feature_df::::: {type(feature_df)} ====\n ")
     feat_cols = feature_df.columns.tolist()
-    feat_cols = feat_cols[4:]
+    feat_cols = feat_cols[3:]
     print("=========== feat cols:::::::", feat_cols)
     X = feature_df[feat_cols]
     y = feature_df['label']
@@ -300,9 +318,16 @@ if __name__ == "__main__":
                 string_data = msg_value.decode('utf-8')
                 # Load the string data into a Python dictionary
                 msg_value = json.loads(string_data)
+                print(f"====== keys of message value: {msg_value.keys()} ============")
                 print(f"message timestamp: {msg_value['timestamp']} ==============")
 
                 # 2. Manage queue
+                feature_df = extract_features(msg_value)
+
+                predicted_stress_result = predict_stress(feature_df)
+
+                print(f"Predicted stress result is: {predicted_stress_result}")
+                '''
                 can_extract_features, data_to_process, raw_msg_df = manage_raw_data_buffer(msg_value, raw_msg_df.copy())
                 if can_extract_features:
                     feature_df = extract_features(data_to_process)
@@ -313,6 +338,7 @@ if __name__ == "__main__":
                     # Add to feature buffer
                     feature_buffer_df = pd.concat([feature_buffer_df, feature_df], ignore_index=True)
                     print(f":::::::::::::::::::::::::: Feature buffer df: {len(feature_buffer_df)}::::::::::::::")
+                '''
                 """
 
                 data, SR = preprocess_data(msg.value()) # pd.DataFrame, samplingrate
