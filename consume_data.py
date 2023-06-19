@@ -33,7 +33,6 @@ SR = 1 # Sampling Rate
 
 logger = TestLogger()
 
-#SENSOR_COLUMNS = ['chestAcc', "chestECG", "chestEMG", "chestEDA", "chestTemp", "chestResp"]
 SENSOR_COLUMNS = ["chest_acc", "chest_ecg","chest_eda",
             "chest_emg",
             "chest_temp",
@@ -218,21 +217,19 @@ def get_feature_columns():
             feature_columns.extend([f"{s_col}_{feat_type}" for feat_type in feat_types])
     return feature_columns
 
+# Main part 1 (feature extraction)
 def extract_features(df):
     feature_dict = {
         'user_id': df['user_id'],#.iloc[0],
         'label': df['label'],#.iloc[0],
         'timestamp': df['timestamp'],#.iloc[0],
-        #'arrived_timestamp': df['arrived_timestamp'],#.iloc[0]
     }
     for s_col in SENSOR_COLUMNS:
         if s_col in ["chest_acc", "chest_ecg","chest_eda","chest_emg","chest_temp","chest_resp"]:
             for i in range(WINDOW_SIZE):
-                if i == 0:
+                if i == 0:  # when i==0, values is empty
                     if s_col == "chest_acc":
-                        # np.sqrt(np.power(signalChest['ACC'][i][0], 2) + np.power(signalChest['ACC'][i][1], 2) + np.power(
-                        # signalChest['ACC'][i][2], 2))
-                        print(f"==== Twins are debugging =====")
+                        # chest_acc has x, y, z values, therefore we treat them different from other sensor modalities
                         chest_acc_list = msg_value['value'][i][s_col]['value']
                         chest_acc_sampling_rate = msg_value['value'][i][s_col]['hz']
                         values = []
@@ -240,11 +237,11 @@ def extract_features(df):
                             chest_acc_x = chest_acc_list[acc_i]['x']
                             chest_acc_y = chest_acc_list[acc_i]['y']
                             chest_acc_z = chest_acc_list[acc_i]['z']
-                            values.append(np.sqrt(np.power(chest_acc_x, 2) + np.power(chest_acc_y, 2) + np.power(chest_acc_z, 2)))
+                            values.append(np.sqrt(np.power(chest_acc_x, 2) + np.power(chest_acc_y, 2) + np.power(chest_acc_z, 2)))  # we create ONE column for chest_acc
 
                     else:
                         values = msg_value["value"][i][s_col]["value"]
-                else:
+                else:  # when i>0, values is not empty
                     if s_col == "chest_acc":
                         chest_acc_list = msg_value['value'][i][s_col]['value']
                         chest_acc_sampling_rate = msg_value['value'][i][s_col]['hz']
@@ -257,6 +254,10 @@ def extract_features(df):
                     else:
                         values.extend(msg_value["value"][i][s_col]["value"])
             print(f"=========== length of streamed data::: {len(values)}")
+
+            # This is the part, where we extract statistical features (below code only extracts mean, std, max, min).
+            # In the updated code (pre-training), we added more features such as range, slope, peak
+            # Please, refer to dwin-pretraining for other statistical feature extractions.
             feature_dict[f"{s_col}_mean"] = np.mean(values)
             feature_dict[f'{s_col}_std'] = np.std(values)
             feature_dict[f"{s_col}_max"] = np.max(values)
@@ -268,9 +269,11 @@ def extract_features(df):
     print(f"================ Extracted features: ============\n{feature_df.head()}")
     return feature_df
 
+
+# Main part 2 (Inference: Stress prediction)
 def predict_stress(feature_df):
     # Fetch model checkpoints
-    model = joblib.load('./models/small_model_checkpoint.joblib')
+    model = joblib.load('./models/small_model_checkpoint.joblib') # Specify path to your pre-trained model
     print(f"============ feature_df::::: {type(feature_df)} ====\n ")
     feat_cols = feature_df.columns.tolist()
     feat_cols = feat_cols[3:]
@@ -281,11 +284,10 @@ def predict_stress(feature_df):
     X, y = X.values, y.values
     predicted_y = model.predict(X)
     # Extract feature importance
-    importances = model.feature_importances_
+    importances = model.feature_importances_  # Note that not all ML models allow feature importance extraction (we used rf, and rf provides feature importance extraction)
 
     # Sort features by importance in descending order
-    indices = np.argsort(importances)[::-1]
-
+    indices = np.argsort(importances)[::-1]  # Sort according to importance
 
     # Print feature ranking
     print("Feature ranking:")
@@ -293,10 +295,9 @@ def predict_stress(feature_df):
         print("%d. feature %d %s (%f)" % (f + 1, indices[f], feat_cols[f], importances[indices[f]]))
     print(f"\n-----------------------------")
 
-
     print(f"predicted_y: {predicted_y}, y: {y}, are they same? {predicted_y.item() == y}")
     print(f"\n-----------------------------")
-    return predicted_y.item()
+    return predicted_y.item() # numpy to int
 
 
 if __name__ == "__main__":
@@ -327,11 +328,12 @@ if __name__ == "__main__":
     is_feature_engineering = True
     last_updated = datetime.now()
     msg_buf = []
+    # The raw message df will have the following columns
     raw_msg_df = pd.DataFrame(columns=['chestAcc',  "chestECG",  "chestEMG",  "chestEDA",  "chestTemp", "chestResp",  "label", "user_id", "timestamp", "arrived_timestamp"])
-    feature_columns = get_feature_columns()
+    feature_columns = get_feature_columns() # extract necessary features used
     feature_buffer_df = pd.DataFrame(columns=feature_columns)
 
-    consumer.subscribe([RAW_SENSOR_DATA])
+    consumer.subscribe([RAW_SENSOR_DATA]) # when raw data arrives (pushed to kafka), consumer can fetch it
     try:
         while True:
             msg = consumer.poll(timeout=3)
@@ -352,9 +354,9 @@ if __name__ == "__main__":
                 print(f"message timestamp: {msg_value['timestamp']} ==============")
 
                 # 2. Manage queue
-                feature_df = extract_features(msg_value)
+                feature_df = extract_features(msg_value)  # Main part 1 (feature extraction)
 
-                predicted_stress_result = predict_stress(feature_df)
+                predicted_stress_result = predict_stress(feature_df)  # Main part 2 (inference: stress prediction)
 
                 print(f"Predicted stress result is: {predicted_stress_result}")
                 '''
