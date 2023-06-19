@@ -230,15 +230,32 @@ def extract_features(df):
             for i in range(WINDOW_SIZE):
                 if i == 0:
                     if s_col == "chest_acc":
-                        values = [random.randint(0, 1000) for _ in range(700)]
-                        # TODO: handle three values (x, y, z) in chest_acc
+                        # np.sqrt(np.power(signalChest['ACC'][i][0], 2) + np.power(signalChest['ACC'][i][1], 2) + np.power(
+                        # signalChest['ACC'][i][2], 2))
+                        print(f"==== Twins are debugging =====")
+                        chest_acc_list = msg_value['value'][i][s_col]['value']
+                        chest_acc_sampling_rate = msg_value['value'][i][s_col]['hz']
+                        values = []
+                        for acc_i in range(chest_acc_sampling_rate):
+                            chest_acc_x = chest_acc_list[acc_i]['x']
+                            chest_acc_y = chest_acc_list[acc_i]['y']
+                            chest_acc_z = chest_acc_list[acc_i]['z']
+                            values.append(np.sqrt(np.power(chest_acc_x, 2) + np.power(chest_acc_y, 2) + np.power(chest_acc_z, 2)))
+
                     else:
-                        values = msg_value['value'][i][s_col]['value']
+                        values = msg_value["value"][i][s_col]["value"]
                 else:
                     if s_col == "chest_acc":
-                        values.extend([random.randint(0, 1000) for _ in range(700)])
+                        chest_acc_list = msg_value['value'][i][s_col]['value']
+                        chest_acc_sampling_rate = msg_value['value'][i][s_col]['hz']
+                        for acc_i in range(chest_acc_sampling_rate):
+                            chest_acc_x = chest_acc_list[acc_i]['x']
+                            chest_acc_y = chest_acc_list[acc_i]['y']
+                            chest_acc_z = chest_acc_list[acc_i]['z']
+                            values.append(
+                                np.sqrt(np.power(chest_acc_x, 2) + np.power(chest_acc_y, 2) + np.power(chest_acc_z, 2)))
                     else:
-                        values.extend(msg_value['value'][i][s_col]['value'])
+                        values.extend(msg_value["value"][i][s_col]["value"])
             print(f"=========== length of streamed data::: {len(values)}")
             feature_dict[f"{s_col}_mean"] = np.mean(values)
             feature_dict[f'{s_col}_std'] = np.std(values)
@@ -263,7 +280,20 @@ def predict_stress(feature_df):
     print(f"===== ")
     X, y = X.values, y.values
     predicted_y = model.predict(X)
+    # Extract feature importance
+    importances = model.feature_importances_
+
+    # Sort features by importance in descending order
+    indices = np.argsort(importances)[::-1]
+
+
+    # Print feature ranking
+    print("Feature ranking:")
+    for f in range(X.shape[1]):
+        print("%d. feature %d %s (%f)" % (f + 1, indices[f], feat_cols[f], importances[indices[f]]))
     print(f"\n-----------------------------")
+
+
     print(f"predicted_y: {predicted_y}, y: {y}, are they same? {predicted_y.item() == y}")
     print(f"\n-----------------------------")
     return predicted_y.item()
